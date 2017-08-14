@@ -14,39 +14,35 @@ struct Entity
 
 static DoubleBuffer<Entity, NUM_ENTITIES> s_doubleBuffer;
 
-void execute_rendering()
-{
-    for( int i = 0; i < NUM_ENTITIES; i++ )
-    {
-        const Entity& e = s_doubleBuffer.read(i);
-        Entity foo = e;
-        Entity bar = foo = e;
-        foo = bar = e;
-    }
-}
-
-void execute_update()
-{
-    int offset = std::rand();
-    for( int i = 0; i < NUM_ENTITIES; i++ )
-    {
-        Entity& e = s_doubleBuffer.write(i);
-        e.data = offset + i;
-        Entity dumb = e;
-        e.extra[0] = 0xFE;
-        e = dumb;
-    }
-}
-
 void worker_rendering()
 {
-    for(int i=0;i<1000;i++)execute_rendering();
+    for( int t = 0; t < 1000; t++ )
+    {
+        for( int i = 0; i < NUM_ENTITIES; i++ )
+        {
+            const Entity& e = s_doubleBuffer.read(i);
+            Entity foo = e;
+            Entity bar = foo = e;
+            foo = bar = e;
+        }
+    }
     printf("done rendering\n");
 }
 
 void worker_update()
 {
-    for(int i=0;i<1000;i++)execute_update();
+    for( int t = 0; t < 1000; t++ )
+    {
+        int offset = std::rand();
+        for( int i = 0; i < NUM_ENTITIES; i++ )
+        {
+            Entity& e = s_doubleBuffer.write(i);
+            e.data = offset + i;
+            Entity dumb = e;
+            e.extra[0] = 0xFE;
+            e = dumb;
+        }
+    }
     printf("done update\n");
 }
 
