@@ -4,9 +4,14 @@
 #include <vector>
 #include <thread>
 
+#include "semaphore.h"
+
 class ParallelTaskProcessor
 {
 public:
+
+    static constexpr size_t MaxThreads = 10;
+
     void registerTask(std::function<void(void)> task)
     {
         createTaskWorker(task);
@@ -36,7 +41,7 @@ public:
 private:
     void waitFinishThreads()
     {
-        for( int i = 0; i < m_tasks.size(); i++ )
+        for( int i = 0; i < m_threads.size(); i++ )
         {
             m_endSem.wait();
         }
@@ -44,21 +49,25 @@ private:
 
     void notifyStartThreads()
     {
-        for( int i = 0; i < m_tasks.size(); i++ )
+        for( int i = 0; i < m_threads.size(); i++ )
         {
-            m_startSem.notify();
+            m_startSem[i].notify();
         }
     }
 
 private:
     void createTaskWorker(std::function<void(void)> worker_process)
     {
-        m_tasks.push_back([this, worker_process]()
+        size_t index = m_tasks.size();
+        assert(index < ParallelTaskProcessor::MaxThreads);
+
+        Semaphore& worker_semaphore = m_startSem[index];
+        m_tasks.push_back([this, worker_process, &worker_semaphore]()
         {
             std::function<void(void)> worker = worker_process;
             while(true)
             {
-                this->m_startSem.wait();
+                worker_semaphore.wait();
                 worker();
                 this->m_endSem.notify();
             }
@@ -66,7 +75,7 @@ private:
     }
 
     std::vector<std::function<void(void)>> m_tasks;
-    Semaphore m_startSem;
+    Semaphore m_startSem[ParallelTaskProcessor::MaxThreads];
     Semaphore m_endSem;
     std::vector<std::thread*> m_threads;
 
